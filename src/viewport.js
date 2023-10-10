@@ -14,6 +14,9 @@ import { Follow } from './plugins/follow'
 import { Wheel } from './plugins/wheel'
 import { MouseEdges } from './plugins/mouse-edges'
 import { Animate } from './plugins/animate'
+//import document from "mocha/lib/runnable";
+//import {isNaN} from "chai/lib/chai/utils";
+//import Math from "yy-fps/docs";
 export { Plugin } from './plugins/plugin'
 
 /**
@@ -140,6 +143,15 @@ export class Viewport extends PIXI.Container {
          * @type {PluginManager}
          */
         this.plugins = new PluginManager(this)
+    }
+
+
+    calculateBounds() {
+        try {
+            super.calculateBounds();
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     /**

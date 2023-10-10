@@ -1,5 +1,4 @@
 import * as PIXI from 'pixi.js';
-import { Rectangle, Point, Container, VERSION } from 'pixi.js';
 
 /**
  * @typedef ViewportTouch
@@ -30,7 +29,7 @@ class InputManager {
     addListeners() {
         this.viewport.interactive = true;
         if (!this.viewport.forceHitArea) {
-            this.viewport.hitArea = new Rectangle(0, 0, this.viewport.worldWidth, this.viewport.worldHeight);
+            this.viewport.hitArea = new PIXI.Rectangle(0, 0, this.viewport.worldWidth, this.viewport.worldHeight);
         }
         this.viewport.on('pointerdown', this.down, this);
         this.viewport.on('pointermove', this.move, this);
@@ -66,6 +65,12 @@ class InputManager {
             this.touches.push({ id: event.data.pointerId, last: null });
         }
         if (this.count() === 1) {
+            if( !this.isLandscape() ){
+                const position = this.screenOrientationPosition(event);
+                event.data.global.x = position.x;
+                event.data.global.y = position.y;
+            }
+
             this.last = event.data.global.clone();
 
             // clicked event does not fire if viewport is decelerating or bouncing
@@ -108,6 +113,59 @@ class InputManager {
         return false
     }
 
+    isLandscape() {
+        return window.innerWidth > window.innerHeight;
+    }
+
+    screenWidth() {
+        return 1920;
+    }
+    screenHeight() {
+        return 1080;
+    }
+
+    screenRatio() {
+        const isLandscape = this.isLandscape();
+        let widthRatio = 1, heightRatio = 1;
+
+        if( isLandscape ){
+            widthRatio = window.innerWidth / this.screenWidth();
+            heightRatio = window.innerHeight / this.screenHeight();
+
+            let ratio = 1;
+            if ( widthRatio < heightRatio )
+                ratio = widthRatio;
+            else
+                ratio = heightRatio;
+
+            return ratio;
+        } else {
+            widthRatio = window.innerWidth / this.screenHeight();
+            heightRatio = window.innerHeight / this.screenWidth();
+        }
+
+        let ratio = 1;
+        if ( widthRatio < heightRatio )
+            ratio = widthRatio;
+        else
+            ratio = heightRatio;
+
+        return ratio;
+    }
+
+    screenOrientationPosition(event) {
+        const globalX = event.data.global.x;
+        const globalY = event.data.global.y;
+
+        const inParentX = globalY - this.viewport.getGlobalPosition().y;
+        const inParentY = Math.abs(globalX - this.viewport.getGlobalPosition().x);
+
+        return {
+            x: inParentX,
+            y: inParentY,
+        }
+    }
+
     /**
      * handle move events for viewport
      * @param {PIXI.InteractionEvent} event
@@ -115,6 +173,12 @@ class InputManager {
     move(event) {
         if (this.viewport.pause || !this.viewport.worldVisible) {
             return
+        }
+
+        if( !this.isLandscape() ){
+            const position = this.screenOrientationPosition(event);
+            event.data.global.x = position.x;
+            event.data.global.y = position.y;
         }
 
         const stop = this.viewport.plugins.move(event);
@@ -167,7 +231,7 @@ class InputManager {
      * @return {PIXI.Point}
      */
     getPointerPosition(event) {
-        let point = new Point();
+        let point = new PIXI.Point();
         if (this.viewport.options.interaction) {
             this.viewport.options.interaction.mapPositionToPoint(point, event.clientX, event.clientY);
         }
@@ -685,7 +749,7 @@ class Drag extends Plugin {
                     }
                     this.last = newPoint;
                     if (!this.moved) {
-                        this.parent.emit('drag-start', { event: event, screen: new Point(this.last.x, this.last.y), world: this.parent.toWorld(new Point(this.last.x, this.last.y)), viewport: this.parent });
+                        this.parent.emit('drag-start', { event: event, screen: new PIXI.Point(this.last.x, this.last.y), world: this.parent.toWorld(new PIXI.Point(this.last.x, this.last.y)), viewport: this.parent });
                     }
                     this.moved = true;
                     this.parent.emit('moved', { viewport: this.parent, type: 'drag' });
@@ -716,7 +780,7 @@ class Drag extends Plugin {
             return true
         } else if (this.last) {
             if (this.moved) {
-                const screen = new Point(this.last.x, this.last.y);
+                const screen = new PIXI.Point(this.last.x, this.last.y);
                 this.parent.emit('drag-end', { event: event, screen, world: this.parent.toWorld(screen), viewport: this.parent });
                 this.last = null;
                 this.moved = false;
@@ -1410,265 +1474,262 @@ class Decelerate extends Plugin {
 
 var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
-function createCommonjsModule(fn, basedir, module) {
-	return module = {
-		path: basedir,
-		exports: {},
-		require: function (path, base) {
-			return commonjsRequire(path, (base === undefined || base === null) ? module.path : base);
-		}
-	}, fn(module, module.exports), module.exports;
+function getDefaultExportFromCjs (x) {
+	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
 }
 
-function commonjsRequire () {
-	throw new Error('Dynamic requires are not currently supported by @rollup/plugin-commonjs');
-}
+var penner = {exports: {}};
 
-var penner = createCommonjsModule(function (module, exports) {
-/*
-	Copyright © 2001 Robert Penner
-	All rights reserved.
+penner.exports;
 
-	Redistribution and use in source and binary forms, with or without modification, 
-	are permitted provided that the following conditions are met:
+(function (module, exports) {
+	/*
+		Copyright © 2001 Robert Penner
+		All rights reserved.
 
-	Redistributions of source code must retain the above copyright notice, this list of 
-	conditions and the following disclaimer.
-	Redistributions in binary form must reproduce the above copyright notice, this list 
-	of conditions and the following disclaimer in the documentation and/or other materials 
-	provided with the distribution.
+		Redistribution and use in source and binary forms, with or without modification, 
+		are permitted provided that the following conditions are met:
 
-	Neither the name of the author nor the names of contributors may be used to endorse 
-	or promote products derived from this software without specific prior written permission.
+		Redistributions of source code must retain the above copyright notice, this list of 
+		conditions and the following disclaimer.
+		Redistributions in binary form must reproduce the above copyright notice, this list 
+		of conditions and the following disclaimer in the documentation and/or other materials 
+		provided with the distribution.
 
-	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
-	EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-	MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-	COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-	EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-	GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
-	AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-	NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
-	OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+		Neither the name of the author nor the names of contributors may be used to endorse 
+		or promote products derived from this software without specific prior written permission.
 
-(function() {
-  var penner, umd;
+		THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+		EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+		MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+		EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+		GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+		AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+		NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+		OF THE POSSIBILITY OF SUCH DAMAGE.
+	 */
 
-  umd = function(factory) {
-    {
-      return module.exports = factory;
-    }
-  };
+	(function() {
+	  var penner, umd;
 
-  penner = {
-    linear: function(t, b, c, d) {
-      return c * t / d + b;
-    },
-    easeInQuad: function(t, b, c, d) {
-      return c * (t /= d) * t + b;
-    },
-    easeOutQuad: function(t, b, c, d) {
-      return -c * (t /= d) * (t - 2) + b;
-    },
-    easeInOutQuad: function(t, b, c, d) {
-      if ((t /= d / 2) < 1) {
-        return c / 2 * t * t + b;
-      } else {
-        return -c / 2 * ((--t) * (t - 2) - 1) + b;
-      }
-    },
-    easeInCubic: function(t, b, c, d) {
-      return c * (t /= d) * t * t + b;
-    },
-    easeOutCubic: function(t, b, c, d) {
-      return c * ((t = t / d - 1) * t * t + 1) + b;
-    },
-    easeInOutCubic: function(t, b, c, d) {
-      if ((t /= d / 2) < 1) {
-        return c / 2 * t * t * t + b;
-      } else {
-        return c / 2 * ((t -= 2) * t * t + 2) + b;
-      }
-    },
-    easeInQuart: function(t, b, c, d) {
-      return c * (t /= d) * t * t * t + b;
-    },
-    easeOutQuart: function(t, b, c, d) {
-      return -c * ((t = t / d - 1) * t * t * t - 1) + b;
-    },
-    easeInOutQuart: function(t, b, c, d) {
-      if ((t /= d / 2) < 1) {
-        return c / 2 * t * t * t * t + b;
-      } else {
-        return -c / 2 * ((t -= 2) * t * t * t - 2) + b;
-      }
-    },
-    easeInQuint: function(t, b, c, d) {
-      return c * (t /= d) * t * t * t * t + b;
-    },
-    easeOutQuint: function(t, b, c, d) {
-      return c * ((t = t / d - 1) * t * t * t * t + 1) + b;
-    },
-    easeInOutQuint: function(t, b, c, d) {
-      if ((t /= d / 2) < 1) {
-        return c / 2 * t * t * t * t * t + b;
-      } else {
-        return c / 2 * ((t -= 2) * t * t * t * t + 2) + b;
-      }
-    },
-    easeInSine: function(t, b, c, d) {
-      return -c * Math.cos(t / d * (Math.PI / 2)) + c + b;
-    },
-    easeOutSine: function(t, b, c, d) {
-      return c * Math.sin(t / d * (Math.PI / 2)) + b;
-    },
-    easeInOutSine: function(t, b, c, d) {
-      return -c / 2 * (Math.cos(Math.PI * t / d) - 1) + b;
-    },
-    easeInExpo: function(t, b, c, d) {
-      if (t === 0) {
-        return b;
-      } else {
-        return c * Math.pow(2, 10 * (t / d - 1)) + b;
-      }
-    },
-    easeOutExpo: function(t, b, c, d) {
-      if (t === d) {
-        return b + c;
-      } else {
-        return c * (-Math.pow(2, -10 * t / d) + 1) + b;
-      }
-    },
-    easeInOutExpo: function(t, b, c, d) {
-      if ((t /= d / 2) < 1) {
-        return c / 2 * Math.pow(2, 10 * (t - 1)) + b;
-      } else {
-        return c / 2 * (-Math.pow(2, -10 * --t) + 2) + b;
-      }
-    },
-    easeInCirc: function(t, b, c, d) {
-      return -c * (Math.sqrt(1 - (t /= d) * t) - 1) + b;
-    },
-    easeOutCirc: function(t, b, c, d) {
-      return c * Math.sqrt(1 - (t = t / d - 1) * t) + b;
-    },
-    easeInOutCirc: function(t, b, c, d) {
-      if ((t /= d / 2) < 1) {
-        return -c / 2 * (Math.sqrt(1 - t * t) - 1) + b;
-      } else {
-        return c / 2 * (Math.sqrt(1 - (t -= 2) * t) + 1) + b;
-      }
-    },
-    easeInElastic: function(t, b, c, d) {
-      var a, p, s;
-      s = 1.70158;
-      p = 0;
-      a = c;
-      if (t === 0) ; else if ((t /= d) === 1) ;
-      if (!p) {
-        p = d * .3;
-      }
-      if (a < Math.abs(c)) {
-        a = c;
-        s = p / 4;
-      } else {
-        s = p / (2 * Math.PI) * Math.asin(c / a);
-      }
-      return -(a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p)) + b;
-    },
-    easeOutElastic: function(t, b, c, d) {
-      var a, p, s;
-      s = 1.70158;
-      p = 0;
-      a = c;
-      if (t === 0) ; else if ((t /= d) === 1) ;
-      if (!p) {
-        p = d * .3;
-      }
-      if (a < Math.abs(c)) {
-        a = c;
-        s = p / 4;
-      } else {
-        s = p / (2 * Math.PI) * Math.asin(c / a);
-      }
-      return a * Math.pow(2, -10 * t) * Math.sin((t * d - s) * (2 * Math.PI) / p) + c + b;
-    },
-    easeInOutElastic: function(t, b, c, d) {
-      var a, p, s;
-      s = 1.70158;
-      p = 0;
-      a = c;
-      if (t === 0) ; else if ((t /= d / 2) === 2) ;
-      if (!p) {
-        p = d * (.3 * 1.5);
-      }
-      if (a < Math.abs(c)) {
-        a = c;
-        s = p / 4;
-      } else {
-        s = p / (2 * Math.PI) * Math.asin(c / a);
-      }
-      if (t < 1) {
-        return -.5 * (a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p)) + b;
-      } else {
-        return a * Math.pow(2, -10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p) * .5 + c + b;
-      }
-    },
-    easeInBack: function(t, b, c, d, s) {
-      if (s === void 0) {
-        s = 1.70158;
-      }
-      return c * (t /= d) * t * ((s + 1) * t - s) + b;
-    },
-    easeOutBack: function(t, b, c, d, s) {
-      if (s === void 0) {
-        s = 1.70158;
-      }
-      return c * ((t = t / d - 1) * t * ((s + 1) * t + s) + 1) + b;
-    },
-    easeInOutBack: function(t, b, c, d, s) {
-      if (s === void 0) {
-        s = 1.70158;
-      }
-      if ((t /= d / 2) < 1) {
-        return c / 2 * (t * t * (((s *= 1.525) + 1) * t - s)) + b;
-      } else {
-        return c / 2 * ((t -= 2) * t * (((s *= 1.525) + 1) * t + s) + 2) + b;
-      }
-    },
-    easeInBounce: function(t, b, c, d) {
-      var v;
-      v = penner.easeOutBounce(d - t, 0, c, d);
-      return c - v + b;
-    },
-    easeOutBounce: function(t, b, c, d) {
-      if ((t /= d) < 1 / 2.75) {
-        return c * (7.5625 * t * t) + b;
-      } else if (t < 2 / 2.75) {
-        return c * (7.5625 * (t -= 1.5 / 2.75) * t + .75) + b;
-      } else if (t < 2.5 / 2.75) {
-        return c * (7.5625 * (t -= 2.25 / 2.75) * t + .9375) + b;
-      } else {
-        return c * (7.5625 * (t -= 2.625 / 2.75) * t + .984375) + b;
-      }
-    },
-    easeInOutBounce: function(t, b, c, d) {
-      var v;
-      if (t < d / 2) {
-        v = penner.easeInBounce(t * 2, 0, c, d);
-        return v * .5 + b;
-      } else {
-        v = penner.easeOutBounce(t * 2 - d, 0, c, d);
-        return v * .5 + c * .5 + b;
-      }
-    }
-  };
+	  umd = function(factory) {
+	    {
+	      return module.exports = factory;
+	    }
+	  };
 
-  umd(penner);
+	  penner = {
+	    linear: function(t, b, c, d) {
+	      return c * t / d + b;
+	    },
+	    easeInQuad: function(t, b, c, d) {
+	      return c * (t /= d) * t + b;
+	    },
+	    easeOutQuad: function(t, b, c, d) {
+	      return -c * (t /= d) * (t - 2) + b;
+	    },
+	    easeInOutQuad: function(t, b, c, d) {
+	      if ((t /= d / 2) < 1) {
+	        return c / 2 * t * t + b;
+	      } else {
+	        return -c / 2 * ((--t) * (t - 2) - 1) + b;
+	      }
+	    },
+	    easeInCubic: function(t, b, c, d) {
+	      return c * (t /= d) * t * t + b;
+	    },
+	    easeOutCubic: function(t, b, c, d) {
+	      return c * ((t = t / d - 1) * t * t + 1) + b;
+	    },
+	    easeInOutCubic: function(t, b, c, d) {
+	      if ((t /= d / 2) < 1) {
+	        return c / 2 * t * t * t + b;
+	      } else {
+	        return c / 2 * ((t -= 2) * t * t + 2) + b;
+	      }
+	    },
+	    easeInQuart: function(t, b, c, d) {
+	      return c * (t /= d) * t * t * t + b;
+	    },
+	    easeOutQuart: function(t, b, c, d) {
+	      return -c * ((t = t / d - 1) * t * t * t - 1) + b;
+	    },
+	    easeInOutQuart: function(t, b, c, d) {
+	      if ((t /= d / 2) < 1) {
+	        return c / 2 * t * t * t * t + b;
+	      } else {
+	        return -c / 2 * ((t -= 2) * t * t * t - 2) + b;
+	      }
+	    },
+	    easeInQuint: function(t, b, c, d) {
+	      return c * (t /= d) * t * t * t * t + b;
+	    },
+	    easeOutQuint: function(t, b, c, d) {
+	      return c * ((t = t / d - 1) * t * t * t * t + 1) + b;
+	    },
+	    easeInOutQuint: function(t, b, c, d) {
+	      if ((t /= d / 2) < 1) {
+	        return c / 2 * t * t * t * t * t + b;
+	      } else {
+	        return c / 2 * ((t -= 2) * t * t * t * t + 2) + b;
+	      }
+	    },
+	    easeInSine: function(t, b, c, d) {
+	      return -c * Math.cos(t / d * (Math.PI / 2)) + c + b;
+	    },
+	    easeOutSine: function(t, b, c, d) {
+	      return c * Math.sin(t / d * (Math.PI / 2)) + b;
+	    },
+	    easeInOutSine: function(t, b, c, d) {
+	      return -c / 2 * (Math.cos(Math.PI * t / d) - 1) + b;
+	    },
+	    easeInExpo: function(t, b, c, d) {
+	      if (t === 0) {
+	        return b;
+	      } else {
+	        return c * Math.pow(2, 10 * (t / d - 1)) + b;
+	      }
+	    },
+	    easeOutExpo: function(t, b, c, d) {
+	      if (t === d) {
+	        return b + c;
+	      } else {
+	        return c * (-Math.pow(2, -10 * t / d) + 1) + b;
+	      }
+	    },
+	    easeInOutExpo: function(t, b, c, d) {
+	      if ((t /= d / 2) < 1) {
+	        return c / 2 * Math.pow(2, 10 * (t - 1)) + b;
+	      } else {
+	        return c / 2 * (-Math.pow(2, -10 * --t) + 2) + b;
+	      }
+	    },
+	    easeInCirc: function(t, b, c, d) {
+	      return -c * (Math.sqrt(1 - (t /= d) * t) - 1) + b;
+	    },
+	    easeOutCirc: function(t, b, c, d) {
+	      return c * Math.sqrt(1 - (t = t / d - 1) * t) + b;
+	    },
+	    easeInOutCirc: function(t, b, c, d) {
+	      if ((t /= d / 2) < 1) {
+	        return -c / 2 * (Math.sqrt(1 - t * t) - 1) + b;
+	      } else {
+	        return c / 2 * (Math.sqrt(1 - (t -= 2) * t) + 1) + b;
+	      }
+	    },
+	    easeInElastic: function(t, b, c, d) {
+	      var a, p, s;
+	      s = 1.70158;
+	      p = 0;
+	      a = c;
+	      if (t === 0) ; else if ((t /= d) === 1) ;
+	      if (!p) {
+	        p = d * .3;
+	      }
+	      if (a < Math.abs(c)) {
+	        a = c;
+	        s = p / 4;
+	      } else {
+	        s = p / (2 * Math.PI) * Math.asin(c / a);
+	      }
+	      return -(a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p)) + b;
+	    },
+	    easeOutElastic: function(t, b, c, d) {
+	      var a, p, s;
+	      s = 1.70158;
+	      p = 0;
+	      a = c;
+	      if (t === 0) ; else if ((t /= d) === 1) ;
+	      if (!p) {
+	        p = d * .3;
+	      }
+	      if (a < Math.abs(c)) {
+	        a = c;
+	        s = p / 4;
+	      } else {
+	        s = p / (2 * Math.PI) * Math.asin(c / a);
+	      }
+	      return a * Math.pow(2, -10 * t) * Math.sin((t * d - s) * (2 * Math.PI) / p) + c + b;
+	    },
+	    easeInOutElastic: function(t, b, c, d) {
+	      var a, p, s;
+	      s = 1.70158;
+	      p = 0;
+	      a = c;
+	      if (t === 0) ; else if ((t /= d / 2) === 2) ;
+	      if (!p) {
+	        p = d * (.3 * 1.5);
+	      }
+	      if (a < Math.abs(c)) {
+	        a = c;
+	        s = p / 4;
+	      } else {
+	        s = p / (2 * Math.PI) * Math.asin(c / a);
+	      }
+	      if (t < 1) {
+	        return -.5 * (a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p)) + b;
+	      } else {
+	        return a * Math.pow(2, -10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p) * .5 + c + b;
+	      }
+	    },
+	    easeInBack: function(t, b, c, d, s) {
+	      if (s === void 0) {
+	        s = 1.70158;
+	      }
+	      return c * (t /= d) * t * ((s + 1) * t - s) + b;
+	    },
+	    easeOutBack: function(t, b, c, d, s) {
+	      if (s === void 0) {
+	        s = 1.70158;
+	      }
+	      return c * ((t = t / d - 1) * t * ((s + 1) * t + s) + 1) + b;
+	    },
+	    easeInOutBack: function(t, b, c, d, s) {
+	      if (s === void 0) {
+	        s = 1.70158;
+	      }
+	      if ((t /= d / 2) < 1) {
+	        return c / 2 * (t * t * (((s *= 1.525) + 1) * t - s)) + b;
+	      } else {
+	        return c / 2 * ((t -= 2) * t * (((s *= 1.525) + 1) * t + s) + 2) + b;
+	      }
+	    },
+	    easeInBounce: function(t, b, c, d) {
+	      var v;
+	      v = penner.easeOutBounce(d - t, 0, c, d);
+	      return c - v + b;
+	    },
+	    easeOutBounce: function(t, b, c, d) {
+	      if ((t /= d) < 1 / 2.75) {
+	        return c * (7.5625 * t * t) + b;
+	      } else if (t < 2 / 2.75) {
+	        return c * (7.5625 * (t -= 1.5 / 2.75) * t + .75) + b;
+	      } else if (t < 2.5 / 2.75) {
+	        return c * (7.5625 * (t -= 2.25 / 2.75) * t + .9375) + b;
+	      } else {
+	        return c * (7.5625 * (t -= 2.625 / 2.75) * t + .984375) + b;
+	      }
+	    },
+	    easeInOutBounce: function(t, b, c, d) {
+	      var v;
+	      if (t < d / 2) {
+	        v = penner.easeInBounce(t * 2, 0, c, d);
+	        return v * .5 + b;
+	      } else {
+	        v = penner.easeOutBounce(t * 2 - d, 0, c, d);
+	        return v * .5 + c * .5 + b;
+	      }
+	    }
+	  };
 
-}).call(commonjsGlobal);
-});
+	  umd(penner);
+
+	}).call(commonjsGlobal); 
+} (penner, penner.exports));
+
+var pennerExports = penner.exports;
+var Penner = /*@__PURE__*/getDefaultExportFromCjs(pennerExports);
 
 /**
  * returns correct Penner equation using string or Function
@@ -1679,7 +1740,7 @@ function ease(ease, defaults)
 {
     if (!ease)
     {
-        return penner[defaults]
+        return Penner[defaults]
     }
     else if (typeof ease === 'function')
     {
@@ -1687,7 +1748,7 @@ function ease(ease, defaults)
     }
     else if (typeof ease === 'string')
     {
-        return penner[ease]
+        return Penner[ease]
     }
 }
 
@@ -1850,11 +1911,11 @@ class Bounce extends Plugin {
                 right: this.parent.right > width,
                 top: this.parent.top < y1,
                 bottom: this.parent.bottom > height,
-                topLeft: new Point(
+                topLeft: new PIXI.Point(
                     x1 * this.parent.scale.x,
                     y1 * this.parent.scale.y
                 ),
-                bottomRight: new Point(
+                bottomRight: new PIXI.Point(
                     width * this.parent.scale.x - this.parent.screenWidth,
                     height * this.parent.scale.y - this.parent.screenHeight
                 )
@@ -1865,8 +1926,8 @@ class Bounce extends Plugin {
             right: this.parent.right > this.parent.worldWidth,
             top: this.parent.top < 0,
             bottom: this.parent.bottom > this.parent.worldHeight,
-            topLeft: new Point(0, 0),
-            bottomRight: new Point(
+            topLeft: new PIXI.Point(0, 0),
+            bottomRight: new PIXI.Point(
                 this.parent.worldWidth * this.parent.scale.x - this.parent.screenWidth,
                 this.parent.worldHeight * this.parent.scale.y - this.parent.screenHeight
             )
@@ -2122,7 +2183,7 @@ class SnapZoom extends Plugin {
     }
 
     createSnapping() {
-        const scale = this.parent.scale;
+        this.parent.scale;
         const startWorldScreenWidth = this.parent.worldScreenWidth;
         const startWorldScreenHeight = this.parent.worldScreenHeight;
         const endWorldScreenWidth = this.parent.screenWidth / this.xScale;
@@ -2764,7 +2825,7 @@ class Animate extends Plugin
         }
         else
         {
-            const originalZoom = new Point(this.parent.scale.x, this.parent.scale.y);
+            const originalZoom = new PIXI.Point(this.parent.scale.x, this.parent.scale.y);
             const percent = this.options.ease(this.time, 0, 1, this.options.time);
             if (this.width !== null)
             {
@@ -2784,7 +2845,7 @@ class Animate extends Plugin
             }
             if (!this.keepCenter)
             {
-                const original = new Point(this.parent.x, this.parent.y);
+                const original = new PIXI.Point(this.parent.x, this.parent.y);
                 this.parent.moveCenter(this.startX + this.deltaX * percent, this.startY + this.deltaY * percent);
                 this.parent.emit('moved', { viewport: this.parent, original, type: 'animate'});
             }
@@ -2832,7 +2893,7 @@ const viewportOptions = {
 /**
  * Main class to use when creating a Viewport
  */
-class Viewport extends Container {
+class Viewport extends PIXI.Container {
     /**
      * @param {ViewportOptions} [options]
      * @fires clicked
@@ -2879,7 +2940,7 @@ class Viewport extends Container {
             // from here: https://github.com/pixijs/pixi.js/issues/5757
             let ticker;
             const pixiNS = PIXI;
-            if (parseInt(/^(\d+)\./.exec(VERSION)[1]) < 5) {
+            if (parseInt(/^(\d+)\./.exec(PIXI.VERSION)[1]) < 5) {
                 ticker = pixiNS.ticker.shared;
             }
             else {
@@ -2922,6 +2983,15 @@ class Viewport extends Container {
          * @type {PluginManager}
          */
         this.plugins = new PluginManager(this);
+    }
+
+
+    calculateBounds() {
+        try {
+            super.calculateBounds();
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     /**
@@ -2971,7 +3041,7 @@ class Viewport extends Container {
             }
 
             if (!this.forceHitArea) {
-                this._hitAreaDefault = new Rectangle(this.left, this.top, this.worldScreenWidth, this.worldScreenHeight);
+                this._hitAreaDefault = new PIXI.Rectangle(this.left, this.top, this.worldScreenWidth, this.worldScreenHeight);
                 this.hitArea = this._hitAreaDefault;
             }
 
@@ -3048,7 +3118,7 @@ class Viewport extends Container {
      * @returns {PIXI.Rectangle}
      */
     getVisibleBounds() {
-        return new Rectangle(this.left, this.top, this.worldScreenWidth, this.worldScreenHeight)
+        return new PIXI.Rectangle(this.left, this.top, this.worldScreenWidth, this.worldScreenHeight)
     }
 
     /**
@@ -3059,7 +3129,7 @@ class Viewport extends Container {
      */
     toWorld(x, y) {
         if (arguments.length === 2) {
-            return this.toLocal(new Point(x, y))
+            return this.toLocal(new PIXI.Point(x, y))
         }
         else {
             return this.toLocal(x)
@@ -3074,7 +3144,7 @@ class Viewport extends Container {
      */
     toScreen(x, y) {
         if (arguments.length === 2) {
-            return this.toGlobal(new Point(x, y))
+            return this.toGlobal(new PIXI.Point(x, y))
         }
         else {
             return this.toGlobal(x)
@@ -3118,7 +3188,7 @@ class Viewport extends Container {
      * @type {PIXI.Point}
      */
     get center() {
-        return new Point(this.worldScreenWidth / 2 - this.x / this.scale.x, this.worldScreenHeight / 2 - this.y / this.scale.y)
+        return new PIXI.Point(this.worldScreenWidth / 2 - this.x / this.scale.x, this.worldScreenHeight / 2 - this.y / this.scale.y)
     }
     set center(value) {
         this.moveCenter(value);
@@ -3151,7 +3221,7 @@ class Viewport extends Container {
      * @type {PIXI.Point}
      */
     get corner() {
-        return new Point(-this.x / this.scale.x, -this.y / this.scale.y)
+        return new PIXI.Point(-this.x / this.scale.x, -this.y / this.scale.y)
     }
     set corner(value) {
         this.moveCorner(value);
@@ -3435,7 +3505,7 @@ class Viewport extends Container {
             right: this.right > this.worldWidth,
             top: this.top < 0,
             bottom: this.bottom > this._worldHeight,
-            cornerPoint: new Point(
+            cornerPoint: new PIXI.Point(
                 this.worldWidth * this.scale.x - this.screenWidth,
                 this.worldHeight * this.scale.y - this.screenHeight
             )
@@ -3516,7 +3586,7 @@ class Viewport extends Container {
         }
         else {
             this._forceHitArea = null;
-            this.hitArea = new Rectangle(0, 0, this.worldWidth, this.worldHeight);
+            this.hitArea = new PIXI.Rectangle(0, 0, this.worldWidth, this.worldHeight);
         }
     }
 

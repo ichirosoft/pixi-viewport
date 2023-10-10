@@ -65,6 +65,12 @@ export class InputManager {
             this.touches.push({ id: event.data.pointerId, last: null })
         }
         if (this.count() === 1) {
+            if( !this.isLandscape() ){
+                const position = this.screenOrientationPosition(event);
+                event.data.global.x = position.x;
+                event.data.global.y = position.y;
+            }
+
             this.last = event.data.global.clone()
 
             // clicked event does not fire if viewport is decelerating or bouncing
@@ -107,6 +113,59 @@ export class InputManager {
         return false
     }
 
+    isLandscape() {
+        return window.innerWidth > window.innerHeight;
+    }
+
+    screenWidth() {
+        return 1920;
+    }
+    screenHeight() {
+        return 1080;
+    }
+
+    screenRatio() {
+        const isLandscape = this.isLandscape();
+        let widthRatio = 1, heightRatio = 1;
+
+        if( isLandscape ){
+            widthRatio = window.innerWidth / this.screenWidth();
+            heightRatio = window.innerHeight / this.screenHeight();
+
+            let ratio = 1;
+            if ( widthRatio < heightRatio )
+                ratio = widthRatio;
+            else
+                ratio = heightRatio;
+
+            return ratio;
+        } else {
+            widthRatio = window.innerWidth / this.screenHeight();
+            heightRatio = window.innerHeight / this.screenWidth();
+        }
+
+        let ratio = 1;
+        if ( widthRatio < heightRatio )
+            ratio = widthRatio;
+        else
+            ratio = heightRatio;
+
+        return ratio;
+    }
+
+    screenOrientationPosition(event) {
+        const globalX = event.data.global.x;
+        const globalY = event.data.global.y;
+
+        const inParentX = globalY - this.viewport.getGlobalPosition().y;
+        const inParentY = Math.abs(globalX - this.viewport.getGlobalPosition().x);
+
+        return {
+            x: inParentX,
+            y: inParentY,
+        }
+    }
+
     /**
      * handle move events for viewport
      * @param {PIXI.InteractionEvent} event
@@ -114,6 +173,12 @@ export class InputManager {
     move(event) {
         if (this.viewport.pause || !this.viewport.worldVisible) {
             return
+        }
+
+        if( !this.isLandscape() ){
+            const position = this.screenOrientationPosition(event);
+            event.data.global.x = position.x;
+            event.data.global.y = position.y;
         }
 
         const stop = this.viewport.plugins.move(event)

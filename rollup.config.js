@@ -3,12 +3,21 @@ import { terser } from 'rollup-plugin-terser'
 import { babel } from '@rollup/plugin-babel'
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
+import json from '@rollup/plugin-json';
+import nodePolyfills from 'rollup-plugin-polyfill-node';
 
 export default [
     {
         input: 'src/viewport.js',
         plugins: [
             peerDepsExternal(),
+            nodePolyfills({
+                includes:[
+                    'node_modules/tty-browserify',
+                    'node_modules/os-browserify',
+                    'node_modules/path-browserify',
+                ],
+            }),
             resolve(
                 {
                     preferBuiltins: false
@@ -40,7 +49,8 @@ export default [
                 {
                     preferBuiltins: false
                 }),
-            commonjs()
+            commonjs(),
+            json(),
         ],
         output:
         {
